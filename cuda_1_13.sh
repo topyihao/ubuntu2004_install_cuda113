@@ -1,44 +1,74 @@
-# this is a instruction of install cuda 11.3 on ubuntu 20.04
-# remove all the previous installed nvidia drivers and cuda 
-# From cuda 11.4 onwards, an uninstaller script has been provided. Use it for the uninstallation:
+#!/bin/bash
 
-# To uninstall cuda
-sudo /usr/local/cuda-11.4/bin/cuda-uninstaller 
-# To uninstall nvidia
-sudo /usr/bin/nvidia-uninstall
+# CUDA 11.3 Installation Script for Ubuntu 20.04
+# This script automates the installation of CUDA 11.3 on Ubuntu 20.04
 
-# Go to the line containing reference to Nvidia repo and comment it by appending # in front of the line, for e.g.:
-#deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /
-# Then run
+# Exit immediately if a command exits with a non-zero status
+set -e
 
-sudo apt-get remove --purge "^nvidia-*" "^libnvidia-*" "*cublas*" "cuda*" "nsight*" "*nvidia*"
-sudo apt-get autoremove && sudo apt-get autoclean
-sudo rm /etc/apt/sources.list.d/cuda*
+# Function to print messages
+print_message() {
+    echo "$(tput setaf 2)$1$(tput sgr0)"
+}
+
+# Function to check if a command was successful
+check_status() {
+    if [ $? -eq 0 ]; then
+        print_message "Success: $1"
+    else
+        echo "$(tput setaf 1)Error: $1 failed$(tput sgr0)"
+        exit 1
+    fi
+}
+
+# Uninstall existing NVIDIA drivers and CUDA
+print_message "Uninstalling existing NVIDIA drivers and CUDA..."
+sudo apt-get purge -y nvidia* cuda* libnvidia*
+sudo apt-get autoremove -y && sudo apt-get autoclean
 sudo rm -rf /usr/local/cuda*
+check_status "Uninstallation of existing drivers and CUDA"
 
+# Update package lists
+print_message "Updating package lists..."
 sudo apt-get update
+check_status "Package list update"
 
+# Install required packages
+print_message "Installing required packages..."
+sudo apt-get install -y g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev
+check_status "Installation of required packages"
 
-# install cuda 11.3
-# I find that install nvidia first cannot install cuda correctly (Don't know why), could because multiple nvidia driver cause conflict
-# just install cuda as following: 
+# Add NVIDIA PPA repository
+print_message "Adding NVIDIA PPA repository..."
+sudo add-apt-repository -y ppa:graphics-drivers/ppa
+sudo apt-get update
+check_status "Addition of NVIDIA PPA repository"
 
-sudo apt-get install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev
-
-# first get the PPA repository driver
-sudo add-apt-repository ppa:graphics-drivers/ppa
-sudo apt update
-
+# Download and move CUDA repository pin
+print_message "Setting up CUDA repository..."
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-ubuntu2004.pin
 sudo mv cuda-ubuntu2004.pin /etc/apt/preferences.d/cuda-repository-pin-600
+check_status "CUDA repository setup"
+
+# Add CUDA repository key and repository
+print_message "Adding CUDA repository key and repository..."
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
-sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
+sudo add-apt-repository -y "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/ /"
 sudo apt-get update
+check_status "Addition of CUDA repository"
 
- # installing CUDA-11.3
-sudo apt install cuda-11-3 
+# Install CUDA 11.3
+print_message "Installing CUDA 11.3..."
+sudo apt-get install -y cuda-11-3
+check_status "Installation of CUDA 11.3"
 
-# setup your paths
+# Set up PATH and LD_LIBRARY_PATH
+print_message "Setting up PATH and LD_LIBRARY_PATH..."
 echo 'export PATH=/usr/local/cuda-11.3/bin:$PATH' >> ~/.bashrc
 echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.3/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
+check_status "PATH and LD_LIBRARY_PATH setup"
+
+print_message "CUDA 11.3 installation completed successfully!"
+print_message "Please reboot your system to complete the installation."
+print_message "After reboot, run 'nvidia-smi' to verify the installation."
